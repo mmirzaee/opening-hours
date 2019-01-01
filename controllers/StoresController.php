@@ -2,8 +2,10 @@
 
 namespace app\controllers;
 
-class StoresController extends BaseController
+class StoresController extends BaseRestController
 {
+    use OpenHoursTrait;
+
     public $modelClass = 'app\models\Stores';
 
     public function actions()

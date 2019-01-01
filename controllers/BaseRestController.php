@@ -6,10 +6,8 @@ use yii\filters\Cors;
 use yii\rest\ActiveController;
 
 
-class BaseController extends ActiveController
+class BaseRestController extends ActiveController
 {
-    use OpenHoursTrait;
-
     public $serializer = [
         'class' => 'yii\rest\Serializer',
         'collectionEnvelope' => 'items',
