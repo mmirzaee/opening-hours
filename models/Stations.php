@@ -13,8 +13,25 @@ use Yii;
  *
  * @property Stores $store
  */
-class Stations extends \yii\db\ActiveRecord
+class Stations extends \yii\db\ActiveRecord implements HasOpenHoursInterface
 {
+    use HasOpenHoursTrait;
+
+    public function hasParent(): bool
+    {
+        return true;
+    }
+
+    public function getParentType(): ?string
+    {
+        return 'Stores';
+    }
+
+    public function getParentId(): ?int
+    {
+        return $this->store_id;
+    }
+
     /**
      * {@inheritdoc}
      */

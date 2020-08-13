@@ -14,8 +14,26 @@ use Yii;
  * @property Stations[] $stations
  * @property Tenants $tenant
  */
-class Stores extends \yii\db\ActiveRecord
+class Stores extends \yii\db\ActiveRecord implements HasOpenHoursInterface
 {
+    use HasOpenHoursTrait;
+
+    public function hasParent(): bool
+    {
+        return true;
+    }
+
+    public function getParentType(): ?string
+    {
+        return 'Tenants';
+    }
+
+    public function getParentId(): ?int
+    {
+        return $this->tenant_id;
+    }
+
+
     /**
      * {@inheritdoc}
      */
