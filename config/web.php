@@ -82,13 +82,16 @@ $config = [
                     'pluralize' => false
                 ],
 
-                // Stores CRUD
+                // Stations CRUD
                 [
                     'class' => 'yii\rest\UrlRule',
                     'controller' => 'stations',
-                    'pluralize' => false
+                    'pluralize' => false,
+                    'extraPatterns' => [
+                        'GET <id:\d+>/is-open-at' => 'is-open-at',
+                        'GET <id:\d+>/next-state-change' => 'next-state-change'
+                    ],
                 ],
-                '<controller:[\w\-]+>/<action:[\w\-]+>/' => '<controller>/<action>',
             ],
         ],
     ],

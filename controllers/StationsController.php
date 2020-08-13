@@ -23,12 +23,12 @@ class StationsController extends BaseController
 
     public function actionIsOpenAt($id)
     {
-        // TODO
+        return 'is open';
     }
 
 
     public function actionNextStateChange($id)
     {
-        // TODO
+        return 'next state change';
     }
 }
