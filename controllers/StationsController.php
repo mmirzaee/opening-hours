@@ -2,31 +2,9 @@
 
 namespace app\controllers;
 
-use yii\filters\Cors;
-use yii\rest\ActiveController;
-
-
-class StationsController extends ActiveController
+class StationsController extends BaseController
 {
-    use OpenHoursTrait;
-
     public $modelClass = 'app\models\Stations';
-    public $serializer = [
-        'class' => 'yii\rest\Serializer',
-        'collectionEnvelope' => 'items',
-    ];
-
-    public function behaviors()
-    {
-        $behaviors = parent::behaviors();
-
-        // add CORS filter
-        $behaviors['corsFilter'] = [
-            'class' => Cors::class,
-        ];
-
-        return $behaviors;
-    }
 
     public function actions()
     {
