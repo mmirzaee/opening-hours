@@ -30,6 +30,8 @@ class OpenHours extends \yii\db\ActiveRecord
     public function rules()
     {
         return [
+            [['week_day', 'from', 'to'], 'validateOverlap'],
+            [['from'], 'validateFrom'],
             ['week_day', 'validateWeekDay'],
             [['entity_id', 'entity_type', 'week_day', 'from', 'to'], 'required'],
             [['entity_id'], 'integer'],
@@ -60,6 +62,33 @@ class OpenHours extends \yii\db\ActiveRecord
         $valid_items = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
         if (!in_array($this->$attribute, $valid_items)) {
             $this->addError($attribute, 'can only be one of: ' . implode(', ', $valid_items));
+        }
+    }
+
+    public function validateFrom($attribute)
+    {
+        if ($this->from >= $this->to) {
+            $this->addError($attribute, 'from time must be before to');
+        }
+    }
+
+    public function validateOverlap($attribute)
+    {
+        if ($overlaps = OpenHours::find()
+            ->where(['entity_id' => $this->entity_id, 'entity_type' => $this->entity_type, 'week_day' => $this->week_day])
+            ->andWhere("
+            open_hours.from BETWEEN '$this->from' AND '$this->to' 
+            OR open_hours.to BETWEEN '$this->from' AND '$this->to'
+            OR '$this->from' BETWEEN open_hours.from AND open_hours.to
+            OR '$this->to' BETWEEN open_hours.from AND open_hours.to
+            ")
+            ->all()) {
+            foreach ($overlaps as $overlap) {
+                if ($overlap->id === $this->id) {
+                    continue;
+                }
+                $this->addError($attribute, "overlaps with id: $overlap->id, week_day: $overlap->week_day, from: $overlap->from, to: $overlap->to");
+            }
         }
     }
 }

@@ -31,6 +31,8 @@ class Exceptions extends \yii\db\ActiveRecord
     public function rules()
     {
         return [
+            [['from', 'to'], 'validateOverlap'],
+            [['from'], 'validateFrom'],
             [['entity_id', 'entity_type', 'from', 'to', 'is_open'], 'required'],
             [['entity_id', 'is_open'], 'integer'],
             [['from', 'to'], 'safe'],
@@ -54,5 +56,36 @@ class Exceptions extends \yii\db\ActiveRecord
             'is_open' => 'Is Open',
             'reason' => 'Reason',
         ];
+    }
+
+
+    public function validateFrom($attribute)
+    {
+        if (strtotime($this->from) >= strtotime($this->to)) {
+            $this->addError($attribute, 'from time must be before to');
+        }
+    }
+
+    public function validateOverlap($attribute)
+    {
+        $from = date("Y-m-d H:i:s", strtotime($this->from));
+        $to = date("Y-m-d H:i:s", strtotime($this->to));
+
+        if ($overlaps = Exceptions::find()
+            ->where(['entity_id' => $this->entity_id, 'entity_type' => $this->entity_type])
+            ->andWhere("
+            exceptions.from BETWEEN '$from' AND '$to' 
+            OR exceptions.to BETWEEN '$from' AND '$to'
+            OR '$from' BETWEEN exceptions.from AND exceptions.to
+            OR '$to' BETWEEN exceptions.from AND exceptions.to
+            ")
+            ->all()) {
+            foreach ($overlaps as $overlap) {
+                if ($overlap->id === $this->id) {
+                    continue;
+                }
+                $this->addError($attribute, "overlaps with id: $overlap->id, from: $overlap->from, to: $overlap->to, reason: $overlap->reason");
+            }
+        }
     }
 }
