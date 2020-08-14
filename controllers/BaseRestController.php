@@ -8,11 +8,6 @@ use yii\rest\ActiveController;
 
 class BaseRestController extends ActiveController
 {
-    public $serializer = [
-        'class' => 'yii\rest\Serializer',
-        'collectionEnvelope' => 'items',
-    ];
-
     public function behaviors()
     {
         $behaviors = parent::behaviors();

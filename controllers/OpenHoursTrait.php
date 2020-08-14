@@ -43,7 +43,7 @@ trait OpenHoursTrait
 
     public function actionUpdateOpenHour($entity_id, $id)
     {
-        if (!$model = OpenHours::findOne(['id' => $id, 'entity_id' => $entity_id])) {
+        if (!$model = OpenHours::findOne(['id' => $id, 'entity_id' => $entity_id, 'entity_type' => $this->getEntityType()])) {
             \Yii::$app->response->setStatusCode(404);
             return 'not found';
         }
@@ -106,7 +106,7 @@ trait OpenHoursTrait
     public function actionUpdateException($entity_id, $id)
     {
 
-        if (!$model = Exceptions::findOne(['id' => $id, 'entity_id' => $entity_id])) {
+        if (!$model = Exceptions::findOne(['id' => $id, 'entity_id' => $entity_id, 'entity_type' => $this->getEntityType()])) {
             \Yii::$app->response->setStatusCode(404);
             return 'not found';
         }

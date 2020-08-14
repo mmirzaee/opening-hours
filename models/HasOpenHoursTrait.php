@@ -4,18 +4,38 @@ namespace app\models;
 
 trait HasOpenHoursTrait
 {
-    public function getWeekDayOpenHours(string $dayOfTheWeek): array
+
+    public function getWeekDayOpenHours(string $week_day): array
     {
-        // TODO
+        return OpenHours::find()
+            ->where(['entity_id' => $this->id, 'entity_type' => $this->getEntityType(), 'week_day' => $week_day])
+            ->all();
     }
 
-    public function getDateTimeOpenHours(\DateTime $dateTime): OpenHours
+    public function getDateTimeOpenHour(\DateTime $datetime): ?OpenHours
     {
-        // TODO
+        $time = $datetime->format("H:i:s");
+        return OpenHours::find()
+            ->where(['entity_id' => $this->id, 'entity_type' => $this->getEntityType(), 'week_day' => $datetime->format('D')])
+            ->andWhere("'$time' BETWEEN open_hours.from AND open_hours.to")
+            ->one();
     }
 
-    public function getDateTimeExceptions(\DateTime $dateTime): OpenHours
+    public function getDateTimeException(\DateTime $datetime): ?Exceptions
     {
-        // TODO
+        $formated_datetime = $datetime->format("Y-m-d H:i:s");
+        return Exceptions::find()
+            ->where(['entity_id' => $this->id, 'entity_type' => $this->getEntityType()])
+            ->andWhere("'$formated_datetime' BETWEEN exceptions.from AND exceptions.to")
+            ->one();
+    }
+
+    private function getEntityType()
+    {
+        try {
+            return (new \ReflectionClass(get_class($this)))->getShortName();
+        } catch (\Exception $e) {
+            return null;
+        }
     }
 }
