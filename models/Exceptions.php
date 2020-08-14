@@ -36,6 +36,7 @@ class Exceptions extends \yii\db\ActiveRecord
             [['from', 'to'], 'safe'],
             [['reason'], 'string'],
             [['entity_type'], 'string', 'max' => 16],
+            [['entity_id', 'entity_type', 'from', 'to'], 'unique', 'targetAttribute' => ['entity_id', 'entity_type', 'from', 'to']],
         ];
     }
 

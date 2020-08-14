@@ -30,13 +30,13 @@ class OpenHours extends \yii\db\ActiveRecord
     public function rules()
     {
         return [
+            ['week_day', 'validateWeekDay'],
             [['entity_id', 'entity_type', 'week_day', 'from', 'to'], 'required'],
             [['entity_id'], 'integer'],
             [['from', 'to'], 'safe'],
             [['entity_type'], 'string', 'max' => 16],
             [['week_day'], 'string', 'max' => 4],
             [['entity_id', 'entity_type', 'week_day', 'from', 'to'], 'unique', 'targetAttribute' => ['entity_id', 'entity_type', 'week_day', 'from', 'to']],
-            [['entity_id', 'entity_type', 'from', 'to'], 'unique', 'targetAttribute' => ['entity_id', 'entity_type', 'from', 'to']],
         ];
     }
 
@@ -53,5 +53,13 @@ class OpenHours extends \yii\db\ActiveRecord
             'from' => 'From',
             'to' => 'To',
         ];
+    }
+
+    public function validateWeekDay($attribute)
+    {
+        $valid_items = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+        if (!in_array($this->$attribute, $valid_items)) {
+            $this->addError($attribute, 'can only be one of: ' . implode(', ', $valid_items));
+        }
     }
 }
