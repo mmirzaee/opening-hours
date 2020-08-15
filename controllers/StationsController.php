@@ -2,9 +2,7 @@
 
 namespace app\controllers;
 
-use app\models\Exceptions;
 use app\models\HasOpenHoursInterface;
-use app\models\OpenHours;
 use app\models\Stations;
 
 class StationsController extends BaseRestController
@@ -44,56 +42,59 @@ class StationsController extends BaseRestController
             $datetime = new \DateTime("@$time");
         } catch (\Exception $e) {
             \Yii::$app->response->setStatusCode(400);
-            return ['msg' => $e];
+            return ['msg' => 'time is not valid'];
         }
 
-        if ($exception = $this->getExceptionRecursive($model, $datetime)) {
-            return $exception->is_open ? ['is_open' => true] : ['is_open' => false];
-        }
-
-        if ($open_hour = $this->getOpenHourRecursive($model, $datetime)) {
-            return ['is_open' => true];
-        }
-
-        return ['is_open' => false];
+        return ['time' => $time, 'datetime' => $datetime->format("Y-m-d H:i:s"), 'is_open' => $this->getOpenState($model, $datetime)["is_open"]];
     }
 
 
     public function actionNextStateChange($id)
     {
-        return 'next state change';
+
+        if (!$model = Stations::findOne(['id' => $id])) {
+            \Yii::$app->response->setStatusCode(404);
+            return ['msg' => 'station not found'];
+        }
+
+        if (!$time = \Yii::$app->request->get('time')) {
+            \Yii::$app->response->setStatusCode(400);
+            return ['msg' => 'time is not provided'];
+        }
+
+        try {
+            $datetime = new \DateTime("@$time");
+        } catch (\Exception $e) {
+            \Yii::$app->response->setStatusCode(400);
+            return ['msg' => 'time is not valid'];
+        }
+
+
     }
 
-
-    private function getExceptionRecursive(HasOpenHoursInterface $entity, \DateTime $datetime): ?Exceptions
+    private function getOpenState(HasOpenHoursInterface $entity, \DateTime $datetime)
     {
-        if ($exception = $entity->getDateTimeException($datetime)) {
-            return $exception;
+        if ($exception = $this->callMethodInTreeBottomUp('getDateTimeException', $entity, [$datetime])) {
+            return ['is_open' => !!$exception->is_open, 'type' => 'exception', 'object' => $exception];
         }
 
-        if ($entity->hasParent()) {
-            $parent_class = '\app\models\\' . $entity->getParentType();
-            if ($parent = $parent_class::findOne(['id' => $entity->getParentId()])) {
-                return $this->getExceptionRecursive($parent, $datetime);
-            }
+        if ($open_hour = $this->callMethodInTreeBottomUp('getDateTimeOpenHour', $entity, [$datetime])) {
+            return ['is_open' => true, 'type' => 'open_hour', 'object' => $open_hour];
         }
 
-        return null;
+        return ['is_open' => false, 'type' => 'open_hour', 'object' => null];
     }
 
-    private function getOpenHourRecursive(HasOpenHoursInterface $entity, \DateTime $datetime): ?OpenHours
+    private function callMethodInTreeBottomUp(string $method, HasOpenHoursInterface $entity, array $args)
     {
-        if ($open_hour = $entity->getDateTimeOpenHour($datetime)) {
-            return $open_hour;
-        }
-
-        if ($entity->hasParent()) {
-            $parent_class = '\app\models\\' . $entity->getParentType();
-            if ($parent = $parent_class::findOne(['id' => $entity->getParentId()])) {
-                return $this->getOpenHourRecursive($parent, $datetime);
+        if (method_exists($entity, $method)) {
+            if ($result = call_user_func_array(array($entity, $method), $args)) {
+                return $result;
+            }
+            if ($parent = $entity->getParent()) {
+                return $this->callMethodInTreeBottomUp($method, $parent, $args);
             }
         }
-
         return null;
     }
 

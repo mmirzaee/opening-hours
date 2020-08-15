@@ -10,7 +10,9 @@ interface HasOpenHoursInterface
 
     public function getParentId(): ?int;
 
-    public function getWeekDayOpenHours(string $week_day): array;
+    public function getParent(): ?HasOpenHoursInterface;
+
+    public function getWeekDayOpenHours(string $week_day): ?array;
 
     public function getDateTimeOpenHour(\DateTime $datetime): ?OpenHours;
 

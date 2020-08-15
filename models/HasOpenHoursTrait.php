@@ -5,7 +5,18 @@ namespace app\models;
 trait HasOpenHoursTrait
 {
 
-    public function getWeekDayOpenHours(string $week_day): array
+    public function getParent(): ?HasOpenHoursInterface
+    {
+        if ($this->hasParent()) {
+            $parent_class = $this->getParentType();
+            if ($parent = $parent_class::findOne(['id' => $this->getParentId()])) {
+                return $parent;
+            }
+        }
+        return null;
+    }
+
+    public function getWeekDayOpenHours(string $week_day): ?array
     {
         return OpenHours::find()
             ->where(['entity_id' => $this->id, 'entity_type' => $this->getEntityType(), 'week_day' => $week_day])
@@ -18,6 +29,7 @@ trait HasOpenHoursTrait
         return OpenHours::find()
             ->where(['entity_id' => $this->id, 'entity_type' => $this->getEntityType(), 'week_day' => $datetime->format('D')])
             ->andWhere("'$time' BETWEEN open_hours.from AND open_hours.to")
+            ->orderBy('from ASC')
             ->one();
     }
 
@@ -29,6 +41,7 @@ trait HasOpenHoursTrait
             ->andWhere("'$formated_datetime' BETWEEN exceptions.from AND exceptions.to")
             ->one();
     }
+
 
     private function getEntityType()
     {
