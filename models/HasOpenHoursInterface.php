@@ -17,4 +17,6 @@ interface HasOpenHoursInterface
     public function getDateTimeOpenHour(\DateTime $datetime): ?OpenHours;
 
     public function getDateTimeException(\DateTime $datetime): ?Exceptions;
+
+    public function getAllExceptionsFrom(\DateTime $start): ?array;
 }

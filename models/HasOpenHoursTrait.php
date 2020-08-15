@@ -8,7 +8,7 @@ trait HasOpenHoursTrait
     public function getParent(): ?HasOpenHoursInterface
     {
         if ($this->hasParent()) {
-            $parent_class = $this->getParentType();
+            $parent_class = '\app\models\\' . $this->getParentType();
             if ($parent = $parent_class::findOne(['id' => $this->getParentId()])) {
                 return $parent;
             }
@@ -20,6 +20,7 @@ trait HasOpenHoursTrait
     {
         return OpenHours::find()
             ->where(['entity_id' => $this->id, 'entity_type' => $this->getEntityType(), 'week_day' => $week_day])
+            ->orderBy('from ASC')
             ->all();
     }
 
@@ -29,7 +30,6 @@ trait HasOpenHoursTrait
         return OpenHours::find()
             ->where(['entity_id' => $this->id, 'entity_type' => $this->getEntityType(), 'week_day' => $datetime->format('D')])
             ->andWhere("'$time' BETWEEN open_hours.from AND open_hours.to")
-            ->orderBy('from ASC')
             ->one();
     }
 
@@ -40,6 +40,16 @@ trait HasOpenHoursTrait
             ->where(['entity_id' => $this->id, 'entity_type' => $this->getEntityType()])
             ->andWhere("'$formated_datetime' BETWEEN exceptions.from AND exceptions.to")
             ->one();
+    }
+
+    public function getAllExceptionsFrom(\DateTime $start): ?array
+    {
+        $formated_datetime = $start->format("Y-m-d H:i:s");
+        return Exceptions::find()
+            ->where(['entity_id' => $this->id, 'entity_type' => $this->getEntityType()])
+            ->andWhere("exceptions.from >= '$formated_datetime' OR exceptions.to >= '$formated_datetime'")
+            ->orderBy('from ASC')
+            ->all();
     }
 
 
