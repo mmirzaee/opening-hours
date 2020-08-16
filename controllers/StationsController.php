@@ -26,6 +26,10 @@ class StationsController extends BaseRestController
         return $actions;
     }
 
+    /*
+     * Rest API Action Methods
+     */
+
     public function actionIsOpenAt($id)
     {
         if (!$model = Stations::findOne(['id' => $id])) {
@@ -40,7 +44,6 @@ class StationsController extends BaseRestController
 
         return ['datetime' => $datetime->format("Y-m-d H:i:s"), 'is_open' => $this->getOpenState($model, $datetime)["is_open"]];
     }
-
 
     public function actionNextStateChange($id)
     {
@@ -71,9 +74,13 @@ class StationsController extends BaseRestController
         return [
             'next_state_change' => 'unknown! the state will not change in next 365 days',
             'current_state' => ($is_currently_open ? 'open' : 'closed'),
-            'next_state' => (!$is_currently_open ? 'open' : 'closed')
+            'next_state' => (!$is_currently_open ? 'open' : 'closed'),
         ];
     }
+
+    /*
+     * Private Methods
+     */
 
     private function getFlattenTimeline(Stations $model, \DateTime $start, int $timeline_duration): array
     {
@@ -133,7 +140,6 @@ class StationsController extends BaseRestController
 
 
         $merged_close_timeline = $this->mergeSortedTimeline($close_timeline);
-
         $final_timeline = [];
         for ($i = 1; $i < count($merged_close_timeline); $i++) {
             $final_timeline[] = ['from' => $merged_close_timeline[$i - 1]['to'], 'to' => $merged_close_timeline[$i]['from']];
@@ -215,8 +221,15 @@ class StationsController extends BaseRestController
             return ['is_open' => !!$exception->is_open, 'type' => 'exception', 'object' => $exception];
         }
 
-        if ($open_hour = $this->callMethodInTreeBottomUp('getDateTimeOpenHour', $entity, [$datetime])) {
-            return ['is_open' => true, 'type' => 'open_hour', 'object' => $open_hour];
+        if ($open_hours = $this->callMethodInTreeBottomUp('getWeekDayOpenHours', $entity, [$datetime->format('D')])) {
+            foreach ($open_hours as $open_hour) {
+                if (
+                    $datetime->getTimestamp() >= strtotime($datetime->format('Y-m-d ' . $open_hour->from))
+                    && $datetime->getTimestamp() <= strtotime($datetime->format('Y-m-d ' . $open_hour->to))
+                ) {
+                    return ['is_open' => true, 'type' => 'open_hour', 'object' => $open_hour];
+                }
+            }
         }
 
         return ['is_open' => false, 'type' => 'open_hour', 'object' => null];
