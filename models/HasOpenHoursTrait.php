@@ -4,7 +4,9 @@ namespace app\models;
 
 trait HasOpenHoursTrait
 {
-
+    /**
+     * @return HasOpenHoursInterface|null
+     */
     public function getParent(): ?HasOpenHoursInterface
     {
         if ($this->hasParent()) {
@@ -16,6 +18,12 @@ trait HasOpenHoursTrait
         return null;
     }
 
+    /**
+     * Returns open hours of a specific day (e.g. Wed, Thu, ...)
+     *
+     * @param string $week_day
+     * @return array|null
+     */
     public function getWeekDayOpenHours(string $week_day): ?array
     {
         return OpenHours::find()
@@ -24,6 +32,12 @@ trait HasOpenHoursTrait
             ->all();
     }
 
+    /**
+     * Returns the open hour object that the datetime is inside or it returns null if didn't find any
+     *
+     * @param \DateTime $datetime
+     * @return OpenHours|null
+     */
     public function getDateTimeOpenHour(\DateTime $datetime): ?OpenHours
     {
         $time = $datetime->format("H:i:s");
@@ -33,6 +47,12 @@ trait HasOpenHoursTrait
             ->one();
     }
 
+    /**
+     *  Returns the exception (app/model/Exceptions) object that the datetime is affected by or it returns null if didn't find any
+     *
+     * @param \DateTime $datetime
+     * @return Exceptions|null
+     */
     public function getDateTimeException(\DateTime $datetime): ?Exceptions
     {
         $formated_datetime = $datetime->format("Y-m-d H:i:s");
@@ -42,6 +62,10 @@ trait HasOpenHoursTrait
             ->one();
     }
 
+    /**
+     * @param \DateTime $start
+     * @return array|null
+     */
     public function getAllExceptionsFrom(\DateTime $start): ?array
     {
         $formated_datetime = $start->format("Y-m-d H:i:s");
@@ -52,7 +76,9 @@ trait HasOpenHoursTrait
             ->all();
     }
 
-
+    /**
+     * @return string|null
+     */
     private function getEntityType()
     {
         try {

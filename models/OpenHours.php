@@ -57,6 +57,9 @@ class OpenHours extends \yii\db\ActiveRecord
         ];
     }
 
+    /**
+     * @param $attribute
+     */
     public function validateWeekDay($attribute)
     {
         $valid_items = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -65,6 +68,11 @@ class OpenHours extends \yii\db\ActiveRecord
         }
     }
 
+    /**
+     * Checks for from be < to
+     *
+     * @param $attribute
+     */
     public function validateFrom($attribute)
     {
         if ($this->from >= $this->to) {
@@ -72,6 +80,12 @@ class OpenHours extends \yii\db\ActiveRecord
         }
     }
 
+    /**
+     * Checks for overlaps (overlaps can not happen with same entity and same week day)
+     * e.g. For an entity (store, tenant or station) we can not have "Thu 12-14" and "thu 13-15"
+     * overlaps still can happen with parents (overlaping on store level with station level is OK)
+     * @param $attribute
+     */
     public function validateOverlap($attribute)
     {
         if ($overlaps = OpenHours::find()

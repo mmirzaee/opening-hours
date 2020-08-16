@@ -26,10 +26,10 @@ class StationsController extends BaseRestController
         return $actions;
     }
 
-    /*
-     * Rest API Action Methods
+    /**
+     * @param $id
+     * @return array
      */
-
     public function actionIsOpenAt($id)
     {
         if (!$model = Stations::findOne(['id' => $id])) {
@@ -45,6 +45,10 @@ class StationsController extends BaseRestController
         return ['datetime' => $datetime->format("Y-m-d H:i:s"), 'is_open' => $this->getOpenState($model, $datetime)["is_open"]];
     }
 
+    /**
+     * @param $id
+     * @return array
+     */
     public function actionNextStateChange($id)
     {
 
@@ -58,9 +62,13 @@ class StationsController extends BaseRestController
             return ['msg' => 'time is not provided or its invalid.'];
         }
 
+        // First it generates a timeline for next 365days including open hours and applied exceptions.
+        // Overlapping exceptions are took care of.
         $station_flatten_timeline = $this->getFlattenTimeline($model, clone $datetime, 365);
         $is_currently_open = $this->getOpenState($model, $datetime)["is_open"];
 
+
+        // Get the first opening in timeline and check if the state is changed
         while (count($station_flatten_timeline) > 0) {
             $timeline_item = array_shift($station_flatten_timeline);
             if ($is_currently_open && $datetime->getTimestamp() > $timeline_item['from'] && $datetime->getTimestamp() < $timeline_item['to']) {
@@ -71,6 +79,7 @@ class StationsController extends BaseRestController
             }
         }
 
+        // State didn't changed in our timeline
         return [
             'next_state_change' => 'unknown! the state will not change in next 365 days',
             'current_state' => ($is_currently_open ? 'open' : 'closed'),
@@ -78,17 +87,22 @@ class StationsController extends BaseRestController
         ];
     }
 
-    /*
-     * Private Methods
+    /**
+     * Generates a timeline of open hours for a period of time.
+     * Exception hours are also applied and overlaps are handled
+     *
+     * @param Stations $model
+     * @param \DateTime $start
+     * @param int $timeline_duration
+     * @return array (e.g. [['from'=><timestamp> , 'to'=><timestamp>]...])
      */
-
     private function getFlattenTimeline(Stations $model, \DateTime $start, int $timeline_duration): array
     {
-        $week_open_hours = $this->getWeekOpenHours($model);
-        list($station_exceptions, $store_exceptions, $tenant_exceptions) = $this->getAllStationTreeExceptionsAfter($model, $start);
-
         $timeline = [];
 
+
+        // First we generate timeline with our opening hours
+        $week_open_hours = $this->getWeekOpenHours($model);
         while ($timeline_duration--) {
             if ($day_open_hours = $week_open_hours[$start->format('D')]) {
                 foreach ($day_open_hours as $open_hour) {
@@ -99,6 +113,9 @@ class StationsController extends BaseRestController
         }
 
 
+        // Apply the exceptions from tenants down to stations
+        list($station_exceptions, $store_exceptions, $tenant_exceptions) = $this->getAllStationTreeExceptionsAfter($model, $start);
+
         $timeline = $this->applyExceptionsToTimeline($timeline, $tenant_exceptions);
         $timeline = $this->applyExceptionsToTimeline($timeline, $store_exceptions);
         $timeline = $this->applyExceptionsToTimeline($timeline, $station_exceptions);
@@ -106,6 +123,13 @@ class StationsController extends BaseRestController
         return $timeline;
     }
 
+    /**
+     * Devides the exceptions into "Open Exceptions" and "Close Exceptions" then apply them to the timeline
+     *
+     * @param $timeline
+     * @param $exceptions
+     * @return array
+     */
     private function applyExceptionsToTimeline($timeline, $exceptions)
     {
         $open_exceptions = $close_exceptions = [];
@@ -123,6 +147,14 @@ class StationsController extends BaseRestController
         return $timeline;
     }
 
+    /**
+     * Merges timeline with $close_exceptions then inverts the timeline from "open hours timeline" to "closed hours timeline",
+     * removes the overlaps and then invert it again to "open hours timeline"
+     *
+     * @param $timeline
+     * @param $close_exceptions
+     * @return array
+     */
     private function excludeCloseExceptionsFromTimeline($timeline, $close_exceptions)
     {
         $close_timeline = [];
@@ -139,7 +171,7 @@ class StationsController extends BaseRestController
         });
 
 
-        $merged_close_timeline = $this->mergeSortedTimeline($close_timeline);
+        $merged_close_timeline = $this->removeOverlapsFromSortedTimeline($close_timeline);
         $final_timeline = [];
         for ($i = 1; $i < count($merged_close_timeline); $i++) {
             $final_timeline[] = ['from' => $merged_close_timeline[$i - 1]['to'], 'to' => $merged_close_timeline[$i]['from']];
@@ -148,6 +180,13 @@ class StationsController extends BaseRestController
         return $final_timeline;
     }
 
+    /**
+     * Simply merges the timeline with $open_exceptions then sorts it and remove overlaps
+     *
+     * @param $timeline
+     * @param $open_exceptions
+     * @return array
+     */
     private function mergeOpenExceptionsWithTimeline($timeline, $open_exceptions)
     {
         $timeline = array_merge($timeline, $open_exceptions);
@@ -155,10 +194,16 @@ class StationsController extends BaseRestController
             return $a['from'] <=> $b['from'];
         });
 
-        return $this->mergeSortedTimeline($timeline);
+        return $this->removeOverlapsFromSortedTimeline($timeline);
     }
 
-    private function mergeSortedTimeline($timeline)
+    /**
+     * Removes overlaps in timeline
+     *
+     * @param $timeline
+     * @return array
+     */
+    private function removeOverlapsFromSortedTimeline($timeline)
     {
         $stack = [];
 
@@ -179,6 +224,13 @@ class StationsController extends BaseRestController
         return $stack;
     }
 
+    /**
+     * Returns all exceptions for a station that their from/to is after $start time
+     *
+     * @param Stations $station
+     * @param \DateTime $start
+     * @return array
+     */
     private function getAllStationTreeExceptionsAfter(Stations $station, \DateTime $start): array
     {
         $station_exceptions = $station->getAllExceptionsFrom($start) ?? [];
@@ -192,6 +244,12 @@ class StationsController extends BaseRestController
         return [$station_exceptions, $store_exceptions, $tenant_exceptions];
     }
 
+    /**
+     * Returns the weekly schedule of open hours (without exceptions) of a station
+     *
+     * @param HasOpenHoursInterface $entity
+     * @return array
+     */
     private function getWeekOpenHours(HasOpenHoursInterface $entity): array
     {
         $result = [];
@@ -202,6 +260,11 @@ class StationsController extends BaseRestController
         return $result;
     }
 
+    /**
+     * Retrives the time from request and creates a DateTime instance
+     *
+     * @return \DateTime|null
+     */
     private function getRequestedDateTime(): ?\DateTime
     {
         if ($time = \Yii::$app->request->get('time')) {
@@ -215,6 +278,14 @@ class StationsController extends BaseRestController
 
     }
 
+    /**
+     * Returns the open status of a station in a specific time.
+     * First check exceptions then weekly schedule
+     *
+     * @param HasOpenHoursInterface $entity
+     * @param \DateTime $datetime
+     * @return array
+     */
     private function getOpenState(HasOpenHoursInterface $entity, \DateTime $datetime)
     {
         if ($exception = $this->callMethodInTreeBottomUp('getDateTimeException', $entity, [$datetime])) {
@@ -235,6 +306,15 @@ class StationsController extends BaseRestController
         return ['is_open' => false, 'type' => 'open_hour', 'object' => null];
     }
 
+    /**
+     * Calls a method of HasOpenHoursInterface objects if the result is null then calls
+     * on the parent (store, tenant).
+     *
+     * @param string $method
+     * @param HasOpenHoursInterface $entity
+     * @param array $args
+     * @return mixed|null
+     */
     private function callMethodInTreeBottomUp(string $method, HasOpenHoursInterface $entity, array $args)
     {
         if (method_exists($entity, $method)) {

@@ -59,6 +59,9 @@ class Exceptions extends \yii\db\ActiveRecord
     }
 
 
+    /**
+     * @param $attribute
+     */
     public function validateFrom($attribute)
     {
         if (strtotime($this->from) >= strtotime($this->to)) {
@@ -66,6 +69,10 @@ class Exceptions extends \yii\db\ActiveRecord
         }
     }
 
+    /**
+     * Checks for overlaps (overlaps still can happen with parents (overlaping on store level with station level is OK))
+     * @param $attribute
+     */
     public function validateOverlap($attribute)
     {
         $from = date("Y-m-d H:i:s", strtotime($this->from));
