@@ -28,8 +28,8 @@ INSTALLATION
 
 ### Install Manually
 
-1. clone the project
-2. run composer install
+1. Clone the project
+2. Run composer install
 3. Once the project creation procedure completed, edit db config and run the `./yii migrate` command to create the required tables.
 
 
