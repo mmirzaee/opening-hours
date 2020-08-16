@@ -95,5 +95,5 @@ vendor/bin/codecept run
 
 Both should pass:
 
-<img src="tests.png" width="250" alt="Passing API tests" />
+<img src="tests.png" width="480" alt="Passing API tests" />
 
